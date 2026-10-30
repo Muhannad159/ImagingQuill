@@ -49,6 +49,20 @@ export default function AIPanel({
   const [proposal, setProposal] = useState<Proposal | null>(null);
   const [original, setOriginal] = useState("");
   const [copied, setCopied] = useState(false);
+  const proposalRef = useRef<HTMLElement>(null);
+  const showProposal = () => {
+    proposalRef.current?.scrollIntoView({
+      behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches
+        ? "instant"
+        : "smooth",
+      block: "start",
+    });
+  };
+  useEffect(() => {
+    if (!proposal) return;
+    const frame = requestAnimationFrame(showProposal);
+    return () => cancelAnimationFrame(frame);
+  }, [proposal]);
   const capture = useRef<{
     json: string;
     from: number;
@@ -97,6 +111,7 @@ export default function AIPanel({
       citations,
     };
     setOriginal(text);
+    setCopied(false);
     setProposal(null);
     setError("");
     setBusy(true);
@@ -255,10 +270,19 @@ export default function AIPanel({
           onChange={(e) => setConsent(e.target.checked)}
         />
         <span>
-          Send this selection and the chosen passages to Groq. My content is
-          educational and contains no patient information.
+          Send selected text and passages for AI processing. No patient
+          information is included.
         </span>
       </label>
+      <div className="proposal-status" role="status" aria-live="polite">
+        {busy ? (
+          <span><Sparkles size={15} /> Generating your suggestion…</span>
+        ) : proposal ? (
+          <button className="text-link" onClick={showProposal}>
+            <Sparkles size={15} /> Your result is ready — view below ↓
+          </button>
+        ) : null}
+      </div>
       {available && <Turnstile nonce={nonce} onToken={setToken} />}
       <button
         className="button full"
@@ -291,9 +315,11 @@ export default function AIPanel({
         </p>
       )}
       {proposal && (
-        <section className="proposal">
-          <div className="eyebrow">DRAFT · REVIEW REQUIRED</div>
-          <h3>Your proposed edit</h3>
+        <section className="proposal" ref={proposalRef} aria-labelledby="ai-proposal-title">
+          <div className="eyebrow"><Sparkles size={14} /> GENERATED WITH AI · REVIEW BEFORE APPLYING</div>
+          <h3 id="ai-proposal-title">
+            {proposal.cards.length ? "Your revision cards" : "Your generated suggestion"}
+          </h3>
           {original && (
             <details>
               <summary>Original selection</summary>

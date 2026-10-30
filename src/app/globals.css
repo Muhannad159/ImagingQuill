@@ -648,22 +648,29 @@ hr {
   padding: 11px;
 }
 .search-box {
-  border: 1px solid var(--line);
+  border: 1px solid #a9bea0;
   display: flex;
   align-items: center;
-  gap: 7px;
-  padding: 0 10px;
+  gap: 10px;
+  padding: 3px 12px;
   border-radius: 5px;
   background: #fffefa;
   color: var(--muted);
 }
+.search-box:focus-within {
+  border-color: var(--teal);
+  box-shadow: 0 0 0 2px #2c6d6120;
+}
 .search-box input {
   border: 0;
   background: none;
-  padding: 9px 0;
+  padding: 9px 4px;
   width: 100%;
   font-size: 12px;
   outline-offset: 0;
+}
+.search-box input:focus-visible {
+  outline: none;
 }
 .library-filters {
   display: flex;
@@ -1093,8 +1100,12 @@ hr {
   margin: 22px 0;
 }
 .paper-result {
-  padding: 18px 0;
-  border-bottom: 1px solid var(--line);
+  padding: 16px 14px;
+  margin: 12px 0;
+  border: 1px solid #a9bea0;
+  border-radius: 6px;
+  background: var(--paper);
+  overflow-wrap: anywhere;
 }
 .paper-result .eyebrow {
   font-size: 9px;
@@ -1107,6 +1118,8 @@ hr {
   border-radius: 3px;
 }
 .paper-title {
+  padding: 4px 6px;
+  border-radius: 3px;
   font-family: var(--serif);
   font-size: 18px;
   line-height: 1.4;
@@ -1125,6 +1138,7 @@ hr {
 }
 .paper-actions {
   display: flex;
+  flex-wrap: wrap;
   gap: 12px;
   margin-top: 12px;
   font-size: 10px;
@@ -1256,8 +1270,10 @@ hr {
   color: var(--muted);
 }
 .source-selection .text-link {
+  display: flex;
+  width: fit-content;
   font-size: 10px;
-  margin-top: 8px;
+  margin-top: 12px;
 }
 .panel-content > .consent {
   display: flex;
@@ -1275,9 +1291,36 @@ hr {
   min-height: 70px;
 }
 .proposal {
-  border-top: 1px solid var(--line);
+  border: 1px solid #a9bea0;
+  border-radius: 6px;
+  background: var(--paper);
   margin-top: 25px;
-  padding-top: 22px;
+  padding: 18px 14px;
+  scroll-margin-top: 70px;
+}
+.proposal-status:empty {
+  display: none;
+}
+.proposal-status {
+  margin: 16px 0;
+  padding: 10px 12px;
+  background: var(--soft);
+  border-radius: 5px;
+  color: var(--teal);
+  font-size: 11px;
+}
+.proposal-status span {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.proposal-status .text-link {
+  text-align: left;
+  font-size: inherit;
+}
+.proposal .eyebrow {
+  font-size: 8px;
+  letter-spacing: 1px;
 }
 .proposal h3 {
   font-family: var(--serif);
