@@ -156,6 +156,14 @@ export default function LiteraturePanel({
             Select up to four passages to send to AI. A summary will cover only
             these passages.
           </p>
+          <div className="passage-selection-status">
+            <b>{passages.length} of 4 selected</b>
+            {passages.length > 0 && (
+              <button className="text-link" onClick={() => setPassages([])}>
+                Clear all
+              </button>
+            )}
+          </div>
           {source.passages.map((p) => (
             <label className="passage" key={p.id}>
               <input
@@ -185,8 +193,8 @@ export default function LiteraturePanel({
             }}
           >
             {passages.length
-              ? "Use selected passages"
-              : "Remove source selection"}
+              ? `Use ${passages.length} selected ${passages.length === 1 ? "passage" : "passages"}`
+              : "Save with no passages selected"}
           </button>
         </section>
       ) : (

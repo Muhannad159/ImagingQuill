@@ -64,6 +64,21 @@ export default function Workspace() {
   const [sources, setSources] = useState<
     { source: SourceText; passageIds: string[] }[]
   >([]);
+  const updateSourceSelection = useCallback(
+    (source: SourceText, passageIds: string[]) => {
+      setSources((old) => {
+        const index = old.findIndex(
+          (entry) => entry.source.paper.pmcid === source.paper.pmcid,
+        );
+        if (index >= 0)
+          return old.map((entry, current) =>
+            current === index ? { source, passageIds } : entry,
+          );
+        return [...old.slice(-2), { source, passageIds }];
+      });
+    },
+    [],
+  );
   const [cardIndex, setCardIndex] = useState(0);
   const [revealed, setRevealed] = useState(false);
   const [editCards, setEditCards] = useState(false);
@@ -714,16 +729,7 @@ export default function Workspace() {
                   pmcid: s.source.paper.pmcid!,
                   passageIds: s.passageIds,
                 }))}
-                onSource={(source, passageIds) => {
-                  setSources((old) => {
-                    const next = old.filter(
-                      (s) => s.source.paper.pmcid !== source.paper.pmcid,
-                    );
-                    return passageIds.length
-                      ? [...next.slice(-2), { source, passageIds }]
-                      : next;
-                  });
-                }}
+                onSource={updateSourceSelection}
               />
             ) : panel === "ai" ? (
               <AIPanel
@@ -736,6 +742,7 @@ export default function Workspace() {
                   setPanel("revision");
                 }}
                 onInsertSource={() => setPanel("literature")}
+                onSourceChange={updateSourceSelection}
               />
             ) : (
               <div className="panel-content">

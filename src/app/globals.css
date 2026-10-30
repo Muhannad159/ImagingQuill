@@ -1265,6 +1265,17 @@ hr {
   font-size: 10px;
   margin: 15px 0;
 }
+.source-selection-heading,
+.passage-selection-status {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.source-selection-heading .text-link,
+.passage-selection-status .text-link {
+  margin-top: 0;
+}
 .source-selection p {
   padding: 6px 0;
   color: var(--muted);
@@ -1274,6 +1285,38 @@ hr {
   width: fit-content;
   font-size: 10px;
   margin-top: 12px;
+}
+.request-size {
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  padding: 10px 12px;
+  margin: 14px 0;
+  color: var(--muted);
+}
+.request-size > div {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  font-size: 10px;
+}
+.request-size progress {
+  width: 100%;
+  height: 5px;
+  margin: 8px 0 3px;
+  accent-color: var(--teal);
+}
+.request-size small {
+  display: block;
+  font-size: 9px;
+  line-height: 1.5;
+}
+.request-size.too-large {
+  border-color: #c67b68;
+  color: #8f3f31;
+}
+.request-size.too-large progress {
+  accent-color: #a94c3c;
 }
 .panel-content > .consent {
   display: flex;
@@ -1917,13 +1960,59 @@ hr {
 }
 .source-selection details {
   margin: 10px 0;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  background: var(--paper);
+  overflow: hidden;
 }
 .source-selection summary {
   cursor: pointer;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 8px;
+  padding: 10px;
+  font-weight: 600;
+}
+.source-selection summary span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.source-selection summary small {
+  color: var(--teal);
+  font-size: 9px;
+  font-weight: 500;
 }
 .source-selection details p {
   max-height: 180px;
   overflow: auto;
+}
+.source-selection .evidence-help {
+  padding: 8px 10px;
+  margin: 0;
+  max-height: none;
+}
+.evidence-passages {
+  max-height: 380px;
+  overflow: auto;
+  border-top: 1px solid var(--line);
+  border-bottom: 1px solid var(--line);
+}
+.evidence-passage {
+  padding: 10px;
+}
+.evidence-source > a {
+  display: inline-flex;
+  margin: 10px;
+  color: var(--teal);
+}
+.passage-selection-status {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  padding: 9px 0;
+  background: var(--soft);
+  color: var(--teal);
 }
 
 .print-title {

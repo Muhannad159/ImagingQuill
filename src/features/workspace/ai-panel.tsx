@@ -4,6 +4,11 @@ import type { Editor } from "@tiptap/react";
 import { Sparkles, ArrowRight } from "lucide-react";
 import { Turnstile } from "@/components/turnstile";
 import {
+  AI_REQUEST_LIMIT,
+  aiRequestSize,
+  aiUserMessage,
+} from "@/lib/ai-request";
+import {
   paragraphs,
   samePaper,
   paperUrl,
@@ -30,12 +35,14 @@ export default function AIPanel({
   sources,
   onCards,
   onInsertSource,
+  onSourceChange,
 }: {
   editor: Editor | null;
   note: Note;
   sources: { source: SourceText; passageIds: string[] }[];
   onCards: (cards: Card[]) => void;
   onInsertSource: () => void;
+  onSourceChange: (source: SourceText, passageIds: string[]) => void;
 }) {
   const [available, setAvailable] = useState<boolean | null>(null);
   const [action, setAction] = useState<Action>("simplify");
@@ -50,6 +57,23 @@ export default function AIPanel({
   const [original, setOriginal] = useState("");
   const [copied, setCopied] = useState(false);
   const proposalRef = useRef<HTMLElement>(null);
+  const selectedSources = sources.filter((source) => source.passageIds.length);
+  const selectedPassageCount = selectedSources.reduce(
+    (total, source) => total + source.passageIds.length,
+    0,
+  );
+  const sourceContexts = selectedSources.map(({ source, passageIds }) => ({
+    id: source.paper.id,
+    title: source.paper.title,
+    passages: source.passages.filter((passage) =>
+      passageIds.includes(passage.id),
+    ),
+  }));
+  const requestSize = aiRequestSize(
+    aiUserMessage(action, language, selection, sourceContexts),
+  );
+  const requestTooLarge = requestSize > AI_REQUEST_LIMIT;
+  const requiresEvidence = action === "explain" || action === "summary";
   const showProposal = () => {
     proposalRef.current?.scrollIntoView({
       behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches
@@ -85,8 +109,10 @@ export default function AIPanel({
     };
     update();
     editor.on("selectionUpdate", update);
+    editor.on("update", update);
     return () => {
       editor.off("selectionUpdate", update);
+      editor.off("update", update);
     };
   }, [editor]);
   async function generate() {
@@ -102,6 +128,18 @@ export default function AIPanel({
     });
     if (hasImage) {
       setError("Select text without images for this writing action.");
+      return;
+    }
+    const liveUserMessage = aiUserMessage(
+      action,
+      language,
+      text,
+      sourceContexts,
+    );
+    if (aiRequestSize(liveUserMessage) > AI_REQUEST_LIMIT) {
+      setError(
+        "This request is too large. Uncheck one or more source passages, or shorten the selected editor text.",
+      );
       return;
     }
     capture.current = {
@@ -127,7 +165,7 @@ export default function AIPanel({
           revision: note.revision,
           language,
           token,
-          sources: sources.map((s) => ({
+          sources: selectedSources.map((s) => ({
             pmcid: s.source.paper.pmcid,
             passageIds: s.passageIds,
           })),
@@ -239,21 +277,72 @@ export default function AIPanel({
         </p>
       </div>
       <div className="source-selection">
-        <b>Selected evidence · {sources.length}</b>
+        <div className="source-selection-heading">
+          <b>
+            Selected evidence · {selectedPassageCount}{" "}
+            {selectedPassageCount === 1 ? "passage" : "passages"}
+          </b>
+          {selectedPassageCount > 0 && (
+            <button
+              className="text-link"
+              disabled={busy}
+              onClick={() => {
+                sources.forEach(({ source }) => onSourceChange(source, []));
+                setProposal(null);
+                setError("");
+              }}
+            >
+              Clear all
+            </button>
+          )}
+        </div>
+        {sources.length === 0 && (
+          <p className="muted">No source passages have been opened yet.</p>
+        )}
         {sources.map((s) => (
-          <details key={s.source.paper.id}>
+          <details
+            className="evidence-source"
+            key={s.source.paper.id}
+            open={sources.length === 1 || s.passageIds.length > 0}
+          >
             <summary>
-              {s.source.paper.title} ({s.passageIds.length} passages)
+              <span>{s.source.paper.title}</span>
+              <small>
+                {s.passageIds.length} of 4 selected
+              </small>
             </summary>
-            {s.source.passages
-              .filter((p) => s.passageIds.includes(p.id))
-              .map((p) => (
-                <p key={p.id}>
-                  <b>{p.section}</b>
-                  <br />
-                  {p.text}
-                </p>
-              ))}
+            <p className="muted evidence-help">
+              Check or uncheck passages here. You can select up to four from
+              this paper.
+            </p>
+            <div className="evidence-passages">
+              {s.source.passages.map((passage) => {
+                const checked = s.passageIds.includes(passage.id);
+                return (
+                  <label className="passage evidence-passage" key={passage.id}>
+                    <input
+                      type="checkbox"
+                      checked={checked}
+                      disabled={
+                        busy || (s.passageIds.length >= 4 && !checked)
+                      }
+                      onChange={(event) => {
+                        const passageIds = event.target.checked
+                          ? [...s.passageIds, passage.id]
+                          : s.passageIds.filter((id) => id !== passage.id);
+                        onSourceChange(s.source, passageIds);
+                        setProposal(null);
+                        setError("");
+                      }}
+                    />
+                    <span>
+                      <b>{passage.section}</b>
+                      {passage.text}
+                    </span>
+                  </label>
+                );
+              })}
+            </div>
             <a href={paperUrl(s.source.paper)} target="_blank" rel="noreferrer">
               Read original ↗
             </a>
@@ -263,6 +352,34 @@ export default function AIPanel({
           Choose source passages →
         </button>
       </div>
+      <div
+        className={`request-size${requestTooLarge ? " too-large" : ""}`}
+        role="status"
+        aria-live="polite"
+      >
+        <div>
+          <span>AI request size</span>
+          <b>
+            {requestSize.toLocaleString()} / {AI_REQUEST_LIMIT.toLocaleString()}
+          </b>
+        </div>
+        <progress
+          max={AI_REQUEST_LIMIT}
+          value={Math.min(requestSize, AI_REQUEST_LIMIT)}
+        />
+        <small>Includes selected text, evidence and response allowance.</small>
+      </div>
+      {requestTooLarge && (
+        <p className="notice error" role="alert">
+          This request is too large. Uncheck source passages above or select
+          less text in the editor.
+        </p>
+      )}
+      {requiresEvidence && selectedPassageCount === 0 && (
+        <p className="notice">
+          This action needs at least one checked source passage.
+        </p>
+      )}
       <label className="consent">
         <input
           type="checkbox"
@@ -291,7 +408,9 @@ export default function AIPanel({
           !consent ||
           !token ||
           busy ||
-          (!selection && !sources.length)
+          requestTooLarge ||
+          (requiresEvidence && selectedPassageCount === 0) ||
+          (!selection && selectedPassageCount === 0)
         }
         onClick={() => void generate()}
       >
