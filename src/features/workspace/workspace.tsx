@@ -719,7 +719,11 @@ export default function Workspace() {
             </button>
           </div>
           {note ? (
-            panel === "literature" ? (
+            <>
+              <div
+                className="panel-view"
+                hidden={panel !== "literature"}
+              >
               <LiteraturePanel
                 key={note.id}
                 papers={note.papers}
@@ -731,7 +735,8 @@ export default function Workspace() {
                 }))}
                 onSource={updateSourceSelection}
               />
-            ) : panel === "ai" ? (
+              </div>
+              <div className="panel-view" hidden={panel !== "ai"}>
               <AIPanel
                 key={note.id}
                 editor={editor}
@@ -744,7 +749,8 @@ export default function Workspace() {
                 onInsertSource={() => setPanel("literature")}
                 onSourceChange={updateSourceSelection}
               />
-            ) : (
+              </div>
+              <div className="panel-view" hidden={panel !== "revision"}>
               <div className="panel-content">
                 <div className="eyebrow">MAKE IT STICK</div>
                 <h2>Return to the ideas.</h2>
@@ -857,7 +863,8 @@ export default function Workspace() {
                   </p>
                 )}
               </div>
-            )
+              </div>
+            </>
           ) : (
             <div className="empty-panel">
               <BookOpen size={32} />

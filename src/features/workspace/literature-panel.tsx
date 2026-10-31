@@ -1,5 +1,5 @@
 "use client";
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Search, ExternalLink, BookOpen } from "lucide-react";
 import { paperUrl, type Paper, type SourceText } from "@/lib/model";
 export default function LiteraturePanel({
@@ -28,6 +28,36 @@ export default function LiteraturePanel({
   const [source, setSource] = useState<SourceText | null>(null);
   const [passages, setPassages] = useState<string[]>([]);
   const controller = useRef<AbortController | null>(null);
+  useEffect(() => {
+    if (!source?.paper.pmcid) return;
+    const next =
+      selectedSources.find((item) => item.pmcid === source.paper.pmcid)
+        ?.passageIds ?? [];
+    setPassages((current) =>
+      current.length === next.length &&
+      current.every((id, index) => id === next[index])
+        ? current
+        : next,
+    );
+  }, [selectedSources, source]);
+  function updatePassage(id: string, checked: boolean) {
+    if (!source) return;
+    const next = checked
+      ? [...passages, id]
+      : passages.filter((passageId) => passageId !== id);
+    setPassages(next);
+    onSource(source, next);
+  }
+  function clearResults() {
+    controller.current?.abort();
+    setResults([]);
+    setTotal(null);
+    setCursor(null);
+    setDetail(null);
+    setSource(null);
+    setError("");
+    setBusy(false);
+  }
   async function search(more = false) {
     controller.current?.abort();
     const ctrl = new AbortController();
@@ -159,7 +189,13 @@ export default function LiteraturePanel({
           <div className="passage-selection-status">
             <b>{passages.length} of 4 selected</b>
             {passages.length > 0 && (
-              <button className="text-link" onClick={() => setPassages([])}>
+              <button
+                className="text-link"
+                onClick={() => {
+                  setPassages([]);
+                  onSource(source, []);
+                }}
+              >
                 Clear all
               </button>
             )}
@@ -171,13 +207,7 @@ export default function LiteraturePanel({
                 aria-label={`${passages.includes(p.id) ? "Unselect" : "Select"} ${p.section} passage`}
                 checked={passages.includes(p.id)}
                 disabled={passages.length >= 4 && !passages.includes(p.id)}
-                onChange={(e) =>
-                  setPassages((old) =>
-                    e.target.checked
-                      ? [...old, p.id]
-                      : old.filter((id) => id !== p.id),
-                  )
-                }
+                onChange={(e) => updatePassage(p.id, e.target.checked)}
               />
               <span>
                 <b>{p.section}</b>
@@ -194,17 +224,22 @@ export default function LiteraturePanel({
             }}
           >
             {passages.length
-              ? `Use ${passages.length} selected ${passages.length === 1 ? "passage" : "passages"}`
-              : "Save with no passages selected"}
+              ? `Done · ${passages.length} ${passages.length === 1 ? "passage" : "passages"} selected`
+              : "Done · no passages selected"}
           </button>
         </section>
       ) : (
         <>
           {total !== null && (
-            <p className="result-count">
-              {total.toLocaleString()} results
-              {total === 0 ? " — try broader search terms." : ""}
-            </p>
+            <div className="search-results-heading">
+              <p className="result-count">
+                {total.toLocaleString()} results
+                {total === 0 ? " — try broader search terms." : ""}
+              </p>
+              <button className="text-link" onClick={clearResults}>
+                Clear results
+              </button>
+            </div>
           )}
           {results.map((p) => (
             <article key={p.id} className="paper-result">

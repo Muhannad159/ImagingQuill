@@ -1035,6 +1035,12 @@ hr {
   border-bottom-color: var(--teal);
   background: #eff3e9;
 }
+.panel-view[hidden] {
+  display: none;
+}
+.panel-view:not([hidden]) {
+  display: contents;
+}
 .panel-content {
   padding: 27px 20px;
 }
@@ -1098,6 +1104,21 @@ hr {
   font-size: 10px;
   color: var(--muted);
   margin: 22px 0;
+}
+.search-results-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin: 20px 0 10px;
+}
+.search-results-heading .result-count {
+  margin: 0;
+}
+.search-results-heading .text-link {
+  flex: 0 0 auto;
+  font-size: 10px;
+  color: var(--teal);
 }
 .paper-result {
   padding: 16px 14px;

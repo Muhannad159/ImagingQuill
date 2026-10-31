@@ -58,9 +58,10 @@ export default function AIPanel({
   const [copied, setCopied] = useState(false);
   const proposalRef = useRef<HTMLElement>(null);
   const requiresEvidence = action === "explain" || action === "summary";
-  const selectedSources = requiresEvidence
-    ? sources.filter((source) => source.passageIds.length)
-    : [];
+  const availableSources = requiresEvidence ? sources : [];
+  const selectedSources = availableSources.filter(
+    (source) => source.passageIds.length,
+  );
   const selectedPassageCount = selectedSources.reduce(
     (total, source) => total + source.passageIds.length,
     0,
@@ -299,37 +300,42 @@ export default function AIPanel({
               </button>
             )}
           </div>
-          {selectedSources.length === 0 && (
-            <p className="muted">No source passages selected.</p>
+          {availableSources.length === 0 && (
+            <p className="muted">No source passages available yet.</p>
           )}
-          {selectedSources.map((s) => (
+          {availableSources.map((s) => (
             <article className="evidence-source" key={s.source.paper.id}>
               <div className="evidence-source-heading">
                 <span>{s.source.paper.title}</span>
                 <small>
-                  {s.passageIds.length}{" "}
-                  {s.passageIds.length === 1 ? "passage" : "passages"}
+                  {s.passageIds.length} of 4 selected
                 </small>
               </div>
               <p className="muted evidence-help">
-                Uncheck any passage you do not want to send.
+                Select or unselect any passage you want to send.
               </p>
               <div className="evidence-passages">
-                {s.source.passages
-                  .filter((passage) => s.passageIds.includes(passage.id))
-                  .map((passage) => (
+                {s.source.passages.map((passage) => {
+                  const checked = s.passageIds.includes(passage.id);
+                  return (
                     <label
                       className="passage evidence-passage"
                       key={passage.id}
                     >
                       <input
                         type="checkbox"
-                        checked
-                        disabled={busy}
-                        onChange={() => {
+                        checked={checked}
+                        disabled={
+                          busy || (s.passageIds.length >= 4 && !checked)
+                        }
+                        onChange={(event) => {
                           onSourceChange(
                             s.source,
-                            s.passageIds.filter((id) => id !== passage.id),
+                            event.target.checked
+                              ? [...s.passageIds, passage.id]
+                              : s.passageIds.filter(
+                                  (id) => id !== passage.id,
+                                ),
                           );
                           setProposal(null);
                           setError("");
@@ -340,7 +346,8 @@ export default function AIPanel({
                         {passage.text}
                       </span>
                     </label>
-                  ))}
+                  );
+                })}
               </div>
               <a
                 href={paperUrl(s.source.paper)}
