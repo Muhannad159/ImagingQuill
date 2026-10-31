@@ -168,6 +168,7 @@ export default function LiteraturePanel({
             <label className="passage" key={p.id}>
               <input
                 type="checkbox"
+                aria-label={`${passages.includes(p.id) ? "Unselect" : "Select"} ${p.section} passage`}
                 checked={passages.includes(p.id)}
                 disabled={passages.length >= 4 && !passages.includes(p.id)}
                 onChange={(e) =>

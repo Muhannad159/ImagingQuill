@@ -57,7 +57,10 @@ export default function AIPanel({
   const [original, setOriginal] = useState("");
   const [copied, setCopied] = useState(false);
   const proposalRef = useRef<HTMLElement>(null);
-  const selectedSources = sources.filter((source) => source.passageIds.length);
+  const requiresEvidence = action === "explain" || action === "summary";
+  const selectedSources = requiresEvidence
+    ? sources.filter((source) => source.passageIds.length)
+    : [];
   const selectedPassageCount = selectedSources.reduce(
     (total, source) => total + source.passageIds.length,
     0,
@@ -73,7 +76,6 @@ export default function AIPanel({
     aiUserMessage(action, language, selection, sourceContexts),
   );
   const requestTooLarge = requestSize > AI_REQUEST_LIMIT;
-  const requiresEvidence = action === "explain" || action === "summary";
   const showProposal = () => {
     proposalRef.current?.scrollIntoView({
       behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches
@@ -276,103 +278,89 @@ export default function AIPanel({
           {selection || "Select a passage in the editor to begin."}
         </p>
       </div>
-      <div className="source-selection">
-        <div className="source-selection-heading">
-          <b>
-            Selected evidence · {selectedPassageCount}{" "}
-            {selectedPassageCount === 1 ? "passage" : "passages"}
-          </b>
-          {selectedPassageCount > 0 && (
-            <button
-              className="text-link"
-              disabled={busy}
-              onClick={() => {
-                sources.forEach(({ source }) => onSourceChange(source, []));
-                setProposal(null);
-                setError("");
-              }}
-            >
-              Clear all
-            </button>
+      {requiresEvidence && (
+        <div className="source-selection">
+          <div className="source-selection-heading">
+            <b>
+              Selected evidence · {selectedPassageCount}{" "}
+              {selectedPassageCount === 1 ? "passage" : "passages"}
+            </b>
+            {selectedPassageCount > 0 && (
+              <button
+                className="text-link"
+                disabled={busy}
+                onClick={() => {
+                  sources.forEach(({ source }) => onSourceChange(source, []));
+                  setProposal(null);
+                  setError("");
+                }}
+              >
+                Clear all
+              </button>
+            )}
+          </div>
+          {selectedSources.length === 0 && (
+            <p className="muted">No source passages selected.</p>
           )}
+          {selectedSources.map((s) => (
+            <article className="evidence-source" key={s.source.paper.id}>
+              <div className="evidence-source-heading">
+                <span>{s.source.paper.title}</span>
+                <small>
+                  {s.passageIds.length}{" "}
+                  {s.passageIds.length === 1 ? "passage" : "passages"}
+                </small>
+              </div>
+              <p className="muted evidence-help">
+                Uncheck any passage you do not want to send.
+              </p>
+              <div className="evidence-passages">
+                {s.source.passages
+                  .filter((passage) => s.passageIds.includes(passage.id))
+                  .map((passage) => (
+                    <label
+                      className="passage evidence-passage"
+                      key={passage.id}
+                    >
+                      <input
+                        type="checkbox"
+                        checked
+                        disabled={busy}
+                        onChange={() => {
+                          onSourceChange(
+                            s.source,
+                            s.passageIds.filter((id) => id !== passage.id),
+                          );
+                          setProposal(null);
+                          setError("");
+                        }}
+                      />
+                      <span>
+                        <b>{passage.section}</b>
+                        {passage.text}
+                      </span>
+                    </label>
+                  ))}
+              </div>
+              <a
+                href={paperUrl(s.source.paper)}
+                target="_blank"
+                rel="noreferrer"
+              >
+                Read original ↗
+              </a>
+            </article>
+          ))}
+          <button className="text-link" onClick={onInsertSource}>
+            Choose source passages →
+          </button>
         </div>
-        {sources.length === 0 && (
-          <p className="muted">No source passages have been opened yet.</p>
-        )}
-        {sources.map((s) => (
-          <details
-            className="evidence-source"
-            key={s.source.paper.id}
-            open={sources.length === 1 || s.passageIds.length > 0}
-          >
-            <summary>
-              <span>{s.source.paper.title}</span>
-              <small>
-                {s.passageIds.length} of 4 selected
-              </small>
-            </summary>
-            <p className="muted evidence-help">
-              Check or uncheck passages here. You can select up to four from
-              this paper.
-            </p>
-            <div className="evidence-passages">
-              {s.source.passages.map((passage) => {
-                const checked = s.passageIds.includes(passage.id);
-                return (
-                  <label className="passage evidence-passage" key={passage.id}>
-                    <input
-                      type="checkbox"
-                      checked={checked}
-                      disabled={
-                        busy || (s.passageIds.length >= 4 && !checked)
-                      }
-                      onChange={(event) => {
-                        const passageIds = event.target.checked
-                          ? [...s.passageIds, passage.id]
-                          : s.passageIds.filter((id) => id !== passage.id);
-                        onSourceChange(s.source, passageIds);
-                        setProposal(null);
-                        setError("");
-                      }}
-                    />
-                    <span>
-                      <b>{passage.section}</b>
-                      {passage.text}
-                    </span>
-                  </label>
-                );
-              })}
-            </div>
-            <a href={paperUrl(s.source.paper)} target="_blank" rel="noreferrer">
-              Read original ↗
-            </a>
-          </details>
-        ))}
-        <button className="text-link" onClick={onInsertSource}>
-          Choose source passages →
-        </button>
-      </div>
-      <div
-        className={`request-size${requestTooLarge ? " too-large" : ""}`}
-        role="status"
-        aria-live="polite"
-      >
-        <div>
-          <span>AI request size</span>
-          <b>
-            {requestSize.toLocaleString()} / {AI_REQUEST_LIMIT.toLocaleString()}
-          </b>
-        </div>
-        <progress
-          max={AI_REQUEST_LIMIT}
-          value={Math.min(requestSize, AI_REQUEST_LIMIT)}
-        />
-        <small>Includes selected text, evidence and response allowance.</small>
-      </div>
+      )}
       {requestTooLarge && (
         <p className="notice error" role="alert">
-          This request is too large. Uncheck source passages above or select
-          less text in the editor.
+          This request is too large. {requiresEvidence
+            ? "Uncheck source passages above or select less text in the editor."
+            : "Select less text in the editor."}
         </p>
       )}
       {requiresEvidence && selectedPassageCount === 0 && (
